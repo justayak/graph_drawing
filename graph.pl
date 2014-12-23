@@ -1,16 +1,32 @@
 :- module(graph, [areNeighbors/3, example/1, nodes/2]).
 :- use_module(lib/plot_graph, [segments_plot/1]).
 
-% directed graph
-hasDirectEdge(A,B):- edge(A,B,_),!.
-
 edgeToSegment(edge(A,B,_),(A,B)).
 
 areNeighbors(A,B, G) :- 
     member(edge(A,B,_), G),!;
     member(edge(B,A,_), G),!.
 
-nodes(G, N) :- G,!.
+% Get all the nodes of a graph as list
+nodes(L, Nodes) :- nodes(L,[],Nodes).
+nodes([],A,A).
+nodes([edge(A,B,_)|R],Acc,Nodes) :- 
+    not(member(A,Acc)), 
+    not(member(B,Acc)),
+    nodes(R,[A,B|Acc], Nodes).
+nodes([edge(A,B,_)|R],Acc,Nodes) :- 
+    not(member(A,Acc)),
+    member(B,Acc),
+    nodes(R,[A|Acc], Nodes).
+nodes([edge(A,B,_)|R],Acc,Nodes) :- 
+    member(A,Acc),
+    not(member(B,Acc)),
+    nodes(R,[B|Acc], Nodes).
+nodes([edge(A,B,_)|R],Acc,Nodes) :- 
+    member(A,Acc),
+    member(B,Acc),
+    nodes(R,Acc, Nodes).
+ 
 
 % HELPER FUNCTIONS
 
