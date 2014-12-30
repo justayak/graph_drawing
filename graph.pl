@@ -26,7 +26,12 @@ nodes([edge(A,B,_)|R],Acc,Nodes) :-
     member(A,Acc),
     member(B,Acc),
     nodes(R,Acc, Nodes).
- 
+
+% no pivoting!
+bronKerbosch(R,[],[]).
+bronKerbosch(R, [V|Rest], X):-
+    bronKerbosch([V|R], 
+
 
 % HELPER FUNCTIONS
 
