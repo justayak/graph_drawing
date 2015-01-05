@@ -8,7 +8,9 @@
     distinctCliques/2,
     powerset/2,
     sortByListSize/2,
-    isClique/2
+    isClique/2,
+    delete/3,
+    deleteIfContains/3
     ]).
 
 edgeToSegment(edge(A,B,_),(A,B)).
@@ -19,15 +21,6 @@ edgeToSegment(edge(A,B,_),(A,B)).
 areNeighbors(A,B, G) :-
     member(edge(A,B,_), G),!;
     member(edge(B,A,_), G),!.
-
-neighbors(_,[],_,R,R).
-neighbors(A,[H|T],G,R,X) :-
-    areNeighbors(A,H,G),
-        append(R,H,R),
-        neighbors(A,T,G,R),!.
-neighbors(A,[H|T],G,R,X) :-
-    not(areNeighbors(A,H,G)),
-        neighbors(A,T,G,R).
 
 /* ==========================
  * GET_NEIGHBORS/3
@@ -40,7 +33,7 @@ getNeighbors(A,G,N):-
     getNeighborsRec(A,G,[],N),!.
 
 
-getNeighborsRec(A,[],N,N).
+getNeighborsRec(_,[],N,N).
 getNeighborsRec(A,[H|T],Acc,N):-
     src(H,X),
     dst(H,Y),
@@ -59,21 +52,36 @@ getNeighborsRec(A,[H|T],Acc,N):-
  * ==========================*/
 distinctCliques(G,MaxCliques):-
     getNodes(G,Nodes),
-    powerset(Nodes,AllPermutations),
-    sortByListSize(AllPermutations, AllSubgraphs),
-    MaxCliques = AllSubgraphs
+    powerset(Nodes,Pow),
+    sortByListSize(Pow, AllSubgraphs), 
+    distinctCliques(G,AllSubgraphs,[],MaxCliques),!
     .
+
+distinctCliques(_,[],M,M).
+distinctCliques(G,[H|T],Acc,MaxCliques):-
+    (
+        isClique(H,G) ->
+            deleteIfContains(H, T, Rest),
+            append(Acc,[H],Acc2),
+            distinctCliques(G,Rest,Acc2,MaxCliques)
+        ;
+            distinctCliques(G,T,Acc,MaxCliques)
+    ).
 
 
 isClique(SubGraph, G) :-
-    isCliqueRec(SubGraph,SubGraph,G),!.
+    length(SubGraph, Len),
+    (
+        Len > 0 ->
+            isCliqueRec(SubGraph,SubGraph,G),!
+    ).
 
 isCliqueRec([],_,_).
 isCliqueRec([X|R],SubGraph,G):-
     isCliqueRecSingle(X,SubGraph,G),
     isCliqueRec(R,SubGraph,G).
 
-isCliqueRecSingle(X,[],G).
+isCliqueRecSingle(_,[],_).
 isCliqueRecSingle(X,[A|Rest],G):-
     (
         X == A ->
@@ -143,6 +151,25 @@ permuation([],[]).
 permuation([H|T], R):-
     permutation(T,X), delete(H,R,X).
 
+
+deleteIfContains(List, PowSet, R):-
+    deleteIfContainsRec(List, PowSet, R), !.
+
+deleteIfContainsRec([], P, P).
+deleteIfContainsRec([H|T], P, R):-
+    deleteIfContainsRecSingle(H, P, [], P2),
+    deleteIfContainsRec(T, P2, R).
+
+deleteIfContainsRecSingle(_, [], R,R).
+deleteIfContainsRecSingle(E, [H|T],Acc, Result):-
+    (
+        member(E, H) ->
+            deleteIfContainsRecSingle(E, T, Acc, Result)
+        ;
+            append(Acc, [H], Acc2),
+            deleteIfContainsRecSingle(E, T, Acc2, Result)
+    ).
+
 example([
     edge(a,b,0.9),
     edge(a,c,0.3),
@@ -195,5 +222,11 @@ test(isNotClique):-
     not(isClique([a,d],G)),
     not(isClique([a,b,c,e],G)),
     not(isClique([a,b,c,d,e],G)).
+
+test(clique):-
+    example(G),
+    distinctCliques(G,N),
+    N == [[a,b,c],[e,d]].
+
 
 :- end_tests(graph_utils).
