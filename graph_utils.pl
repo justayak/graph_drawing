@@ -1,7 +1,7 @@
 :- module(graph_utils, [
     areNeighbors/3, 
     edgeToSegment/2, 
-    neighbors/2,
+    neighbors/5,
     getNodes/2,
     example/1
     ]).
@@ -13,7 +13,7 @@ areNeighbors(A,B, G) :-
     member(edge(A,B,_), G),!;
     member(edge(B,A,_), G),!.
 
-neighbors(A,[],G,R,R).
+neighbors(_,[],_,R,R).
 neighbors(A,[H|T],G,R,X) :-
     areNeighbors(A,H,G),
         append(R,H,R),
@@ -24,22 +24,28 @@ neighbors(A,[H|T],G,R,X) :-
 
 
 getNodes(G,N):-
-    innerGetNodes(G,[],N).
+    getNodesRec(G,[],N).
 
-innerGetNodes([],N,N).
-innerGetNodes([H|T],A,N):-
+% inner helper function
+getNodesRec([],N,N).
+getNodesRec([H|T],A,N):-
     src(H,X),
-    write(X),
-    member(X,A),
-    write('lol'),
-    innerGetNodes(T,A,N).
-innerGetNodes([H|T],A,N):-
-    src(H,X),
-    not(member(X,A)),
-    write(T),
-    append(A,X,L),
-    innerGetNodes(T,L,N).
+    dst(H,Y),
+    (
+        member(X,A) ->
+            set(A,L)
+        ;
+            append(A,[X],L)
+    ),
+    (
+        member(Y,L) ->
+            set(L,M)
+        ;
+            append(L,[Y],M)
+    ),
+    getNodesRec(T,M,N).
 
+set(A,A).
 
 src(edge(A,_,_),A).
 dst(edge(_,B,_),B).
