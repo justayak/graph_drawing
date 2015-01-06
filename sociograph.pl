@@ -16,7 +16,8 @@ sociograph(a).
  * [wSegment(point(X1,Y1),point(X2,Y2),WEIGHT,DIRECTED)]
  * =============================== */ 
 renderGraph(G,W,H,Segments) :-
-    distinctCliques(G,DistinctMaxCliques)
+    distinctCliques(G,DistinctMaxCliques),
+    defineCircleParameters(DistinctMaxCliques,W,H,Circle)
 .
 
 /* ===============================
@@ -33,13 +34,14 @@ renderGraph(G,W,H,Segments) :-
  *    SCircleDistance: Arc-Distance between
  *      sub circles on the main circle
  * =============================== */ 
-defineRadius(DistinctMaxCliques,W,H, Circle):-
+defineCircleParameters(DistinctMaxCliques,W,H, Circle):-
     length(DistinctMaxCliques,N),
     min(W,H,S),
     Alpha is 360/N,
     RB is S / (2 * (1 + sin(Alpha/2))),
     RS is RB * sin(Alpha/2),
-    Circle = (Alpha,RB,RS)
+    RSReduced is RS * 0.9,
+    Circle = (Alpha,RB,RSReduced)
     .
     
 
@@ -69,7 +71,7 @@ ex([
 test(first) :-
     graph_utils:example(G),
     graph_utils:distinctCliques(G,C),
-    defineRadius(C,800,600,Ci),
+    defineCircleParameters(C,800,600,Ci),
     writeln(Ci).
 
 test(plot) :-
