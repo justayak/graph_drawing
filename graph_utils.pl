@@ -11,7 +11,8 @@
     isClique/2,
     delete/3,
     deleteIfContains/3,
-    example2/1
+    example2/1,
+    findInterconnections/3
     ]).
 
 edgeToSegment(edge(A,B,_),(A,B)).
@@ -47,6 +48,42 @@ getNeighborsRec(A,[H|T],Acc,N):-
             set(Acc,AccPlus)
     ),
     getNeighborsRec(A,T,AccPlus,N).
+
+/* ==========================
+ * FIND_INTERCONNECTIONS/2
+ * ==========================*/
+findInterconnections(G,MaxCliques,Segments):-
+    findInterconnections(G,MaxCliques,[],Segments),!.
+
+findInterconnections(_,[],Segments,Segments).
+findInterconnections(G,[Clique|Rest],Acc,Segments):-
+    findCliqueInterconnections(G,Clique,Rest,[],CliqueSegments),
+    append(Acc,CliqueSegments,Acc2),
+    findInterconnections(G,Rest,Acc2,Segments).
+
+findCliqueInterconnections(_,[],_,Segments,Segments).
+findCliqueInterconnections(G,[Node|Rest],OtherCliques,Acc,Segments):-
+    findNodeInterconnections(G,Node,OtherCliques,[],NodeSegments),
+    append(Acc,NodeSegments,Acc2),
+    findCliqueInterconnections(G,Rest,OtherCliques,Acc2,Segments).
+
+
+findNodeInterconnections(_,_,[],Segments,Segments).
+findNodeInterconnections(G,Node,[OtherClique|Rest],Acc,Segments):-
+    findNodeInterconnectionsInClique(G,Node,OtherClique,[],NodeSegments),
+    append(Acc,NodeSegments,Acc2),
+    findNodeInterconnections(G,Node,Rest,Acc2,Segments).
+
+findNodeInterconnectionsInClique(_,_,[],Segments,Segments).
+findNodeInterconnectionsInClique(G,Node,[Other|Rest],Acc,Segments):-
+    (
+        areNeighbors(Node,Other,G)->
+            append(Acc,[segment(Node,Other)],Acc2)
+        ;
+            Acc2 = Acc
+    ),
+    findNodeInterconnectionsInClique(G,Node,Rest,Acc2,Segments).
+
 
 /* ==========================
  * FIND_DISTINCT_MAXIMUM_CLIQUES/2
@@ -249,6 +286,12 @@ test(isClique):-
     example(G),
     isClique([a,b,c],G),
     isClique([e,d],G).
+
+test(findInterconnections):-
+    example(G),
+    distinctCliques(G,Cliques),
+    findInterconnections(G,Cliques,Inter),
+    Inter == [segment(a,e),segment(c,d)].
 
 test(isNotClique):-
     example(G),

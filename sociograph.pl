@@ -1,13 +1,9 @@
 :- module(sociograph, [
-    sociograph/1,
-    min/3,
     degToPoint/5,
     renderGraph/4
 ]).
 :- use_module(lib/plot_graph, [segments_plot/1]).
-:- use_module(graph_utils, [distinctCliques/2, example/1,example2/1]).
-
-sociograph(a).
+:- use_module(graph_utils, [distinctCliques/2, example/1,example2/1,findInterconnections/3]).
 
 /* ===============================
  * RENDER_GRAPH
@@ -20,11 +16,12 @@ sociograph(a).
 renderGraph(G,W,H,Segments) :-
     distinctCliques(G,DistinctMaxCliques),
     defineCircleParameters(DistinctMaxCliques,W,H,Circle),
-    renderGraph(DistinctMaxCliques,Circle,0,[],Segments)
-.
+    renderGraph(DistinctMaxCliques,Circle,0,[],Segments,[],Lookup).
+    %findInterconnections(G,DistinctMaxCliques,Inter),
+    %append(Temp,Inter,Segments).
 
-renderGraph([],_,_,Segments,Segments).
-renderGraph([Clique|Rest],Circle,I,Acc,Segments) :-
+renderGraph([],_,_,Segments,Segments,Lookup,Lookup).
+renderGraph([Clique|Rest],Circle,I,Acc,Segments,LookupAcc,Lookup) :-
     Ipp is I+1,
     alpha(Circle,Alpha),
     AlphaC is Alpha * I,
@@ -34,25 +31,27 @@ renderGraph([Clique|Rest],Circle,I,Acc,Segments) :-
     degToPoint(X,Y,AlphaC,R,Point),
     px(Point,Px),
     py(Point,Py),
-    calculateCliqueCircle(Clique,Circle,Px,Py,CliqueSegments),
+    random(0.0,360.0,RandomDeg),
+    calculateCliqueCircle(Clique,Circle,Px,Py,RandomDeg,CliqueSegments),
     append(Acc,CliqueSegments,Acc2),
     renderGraph(Rest,Circle,Ipp,Acc2,Segments).
 
 
-calculateCliqueCircle(Clique,Circle,X,Y,Result) :-
+calculateCliqueCircle(Clique,Circle,X,Y,RandomDeg,Result) :-
     length(Clique,N),
     Alpha is 360/N,
-    calculateCliqueCircle(Clique,Circle,Alpha,X,Y,0,[],Points),
+    calculateCliqueCircle(Clique,Circle,Alpha,X,Y,0,RandomDeg,[],Points),
     segmentate(Points,[],Result).
 
-calculateCliqueCircle([],_,_,_,_,_,Result,Result).
-calculateCliqueCircle([_|Rest],Circle,Alpha,X,Y,I,Acc,Result) :-
+calculateCliqueCircle([],_,_,_,_,_,_,Result,Result).
+calculateCliqueCircle([_|Rest],Circle,Alpha,X,Y,I,RandomDeg,Acc,Result) :-
     Ipp is I+1,
-    AlphaN is I * Alpha,
+    AlphaT is I * Alpha,
+    addDeg(AlphaT,RandomDeg,AlphaN),
     cliqueRadius(Circle,R),
     degToPoint(X,Y,AlphaN,R,Point),
     append(Acc,[Point],Acc2),
-    calculateCliqueCircle(Rest,Circle,Alpha,X,Y,Ipp,Acc2,Result).
+    calculateCliqueCircle(Rest,Circle,Alpha,X,Y,Ipp,RandomDeg,Acc2,Result).
 
 
 segmentate([],Segments,Segments).
@@ -65,6 +64,14 @@ createSegments(_,[],Segments,Segments).
 createSegments(Node,[NextNode|Rest],Acc,Segments):-
     append(Acc,[segment(Node,NextNode)],Acc2),
     createSegments(Node,Rest,Acc2,Segments).
+
+addDeg(Deg1,Deg2,Result):-
+    (
+        (Deg1 + Deg2) > 360 ->
+            Result is abs(Deg1 - Deg2)
+        ;
+            Result is Deg1 + Deg2
+    ).
 
 /* ===============================
  * DEFINE_RADIUS
@@ -147,7 +154,9 @@ test(first) :-
     writeln(Ci).
 
 test(plot) :-
-    ex(Ss),
+    graph_utils:example(G),
+    renderGraph(G,800,600,Ss),
+    writeln(Ss),
     segments_plot(Ss).
 
 test(plot2):-
