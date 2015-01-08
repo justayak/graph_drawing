@@ -191,7 +191,7 @@ ex([
 test(first) :-
     graph_utils:example2(G),
     graph_utils:distinctCliques(G,C),
-    defineCircleParameters(C,800,600,Ci),
+    defineCircleParameters(C,600,600,Ci),
     writeln(Ci).
 
 test(plot) :-
