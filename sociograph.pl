@@ -86,8 +86,11 @@ defineCircleParameters(DistinctMaxCliques,W,H, Circle):-
     X is W/2,
     Y is H/2,
     Alpha is 360/N,
-    RB is S / (2 * (1 + sin(Alpha/2))),
-    RS is RB * sin(Alpha/2),
+    HalfAlpha is Alpha/2,
+    degToRad(HalfAlpha,HalfAlphaRad),
+    RB is S / (2 * (1 + sin(HalfAlphaRad))),
+    RS is RB * sin(HalfAlphaRad),
+
     RSReduced is RS * 0.9, % reduce the clique circle a little so they arent too close
     Circle = (Alpha,RB,RSReduced,X,Y)
     .
@@ -118,23 +121,14 @@ degToPoint(X,Y,  0,R,Point):- XR is X + R, Point = point(XR,Y),!.
 degToPoint(X,Y, 90,R,Point):- YR is Y - R, Point = point(X,YR),!.
 degToPoint(X,Y,180,R,Point):- XR is X - R, Point = point(XR,Y),!.
 degToPoint(X,Y,360,R,Point):- YR is Y + R, Point = point(X,YR),!.
-degToPoint(X,Y,Alpha,R,Point):- 0 =< Alpha, Alpha < 45,
-    Xs is X + R * cos(Alpha),
-    Ys is Y + R * sin(Alpha),
-    Point = point(Xs,Ys),!.
-degToPoint(X,Y,Alpha,R,Point):- 45 =< Alpha, Alpha < 90,
-    Xs is X + R * cos(Alpha),
-    Ys is Y - R * sin(Alpha),
-    Point = point(Xs,Ys),!.
-degToPoint(X,Y,Alpha,R,Point):- 90 =< Alpha, Alpha < 180,
-    Xs is X - R * cos(Alpha),
-    Ys is Y - R * sin(Alpha),
-    Point = point(Xs,Ys),!.
-degToPoint(X,Y,Alpha,R,Point):- 180 =< Alpha, Alpha < 360,
-    Xs is X - R * cos(Alpha),
-    Ys is Y + R * sin(Alpha),
+degToPoint(X,Y,Alpha,R,Point):-
+    degToRad(Alpha,AlphaRad),
+    Xs is X + R * cos(AlphaRad),
+    Ys is Y + R * sin(AlphaRad),
     Point = point(Xs,Ys),!.
 
+degToRad(Deg,Rad):-
+    Rad is Deg * (pi / 180).
 
 /* ============== *
  *   UNIT  TEST   *
@@ -147,7 +141,7 @@ ex([
 ]).
 
 test(first) :-
-    graph_utils:example(G),
+    graph_utils:example2(G),
     graph_utils:distinctCliques(G,C),
     defineCircleParameters(C,800,600,Ci),
     writeln(Ci).
@@ -159,6 +153,7 @@ test(plot) :-
 test(plot2):-
     graph_utils:example2(G),
     renderGraph(G,800,600,Ss),
+    writeln(Ss),
     segments_plot(Ss).
 
 :- end_tests(sociograph).
