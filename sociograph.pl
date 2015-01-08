@@ -16,10 +16,15 @@
 renderGraph(G,W,H,Segments) :-
     distinctCliques(G,DistinctMaxCliques),
     defineCircleParameters(DistinctMaxCliques,W,H,Circle),
-    renderGraph(DistinctMaxCliques,Circle,0,[],Segments,[],Lookup).
-    %findInterconnections(G,DistinctMaxCliques,Inter),
-    %append(Temp,Inter,Segments).
+    renderGraph(DistinctMaxCliques,Circle,0,[],CliqueSegments,[],Lookup),
+    findInterconnections(G,DistinctMaxCliques,Inter),
+    segmentsToPositions(Inter,Lookup,InterSegments),
+    append(CliqueSegments,InterSegments,Segments).
 
+/*
+ *
+ *  Lookup: [(a,point(X,Y)), (b,point(X,Y)), ...]
+ */
 renderGraph([],_,_,Segments,Segments,Lookup,Lookup).
 renderGraph([Clique|Rest],Circle,I,Acc,Segments,LookupAcc,Lookup) :-
     Ipp is I+1,
@@ -32,26 +37,28 @@ renderGraph([Clique|Rest],Circle,I,Acc,Segments,LookupAcc,Lookup) :-
     px(Point,Px),
     py(Point,Py),
     random(0.0,360.0,RandomDeg),
-    calculateCliqueCircle(Clique,Circle,Px,Py,RandomDeg,CliqueSegments),
+    calculateCliqueCircle(Clique,Circle,Px,Py,RandomDeg,CliqueSegments,CircleLookup),
     append(Acc,CliqueSegments,Acc2),
-    renderGraph(Rest,Circle,Ipp,Acc2,Segments).
+    append(LookupAcc,CircleLookup,LookupAcc2),
+    renderGraph(Rest,Circle,Ipp,Acc2,Segments,LookupAcc2,Lookup).
 
 
-calculateCliqueCircle(Clique,Circle,X,Y,RandomDeg,Result) :-
+calculateCliqueCircle(Clique,Circle,X,Y,RandomDeg,Result,Lookup) :-
     length(Clique,N),
     Alpha is 360/N,
-    calculateCliqueCircle(Clique,Circle,Alpha,X,Y,0,RandomDeg,[],Points),
+    calculateCliqueCircle(Clique,Circle,Alpha,X,Y,0,RandomDeg,[],Points,[],Lookup),
     segmentate(Points,[],Result).
 
-calculateCliqueCircle([],_,_,_,_,_,_,Result,Result).
-calculateCliqueCircle([_|Rest],Circle,Alpha,X,Y,I,RandomDeg,Acc,Result) :-
+calculateCliqueCircle([],_,_,_,_,_,_,Result,Result,Lookup,Lookup).
+calculateCliqueCircle([Node|Rest],Circle,Alpha,X,Y,I,RandomDeg,Acc,Result,LookupAcc,Lookup) :-
     Ipp is I+1,
     AlphaT is I * Alpha,
     addDeg(AlphaT,RandomDeg,AlphaN),
     cliqueRadius(Circle,R),
     degToPoint(X,Y,AlphaN,R,Point),
     append(Acc,[Point],Acc2),
-    calculateCliqueCircle(Rest,Circle,Alpha,X,Y,Ipp,RandomDeg,Acc2,Result).
+    append(LookupAcc,[(Node,Point)],LookupAcc2),
+    calculateCliqueCircle(Rest,Circle,Alpha,X,Y,Ipp,RandomDeg,Acc2,Result,LookupAcc2,Lookup).
 
 
 segmentate([],Segments,Segments).
@@ -72,6 +79,40 @@ addDeg(Deg1,Deg2,Result):-
         ;
             Result is Deg1 + Deg2
     ).
+/* ===============================
+ *    Segments to Positions
+ *    Segments: [segment(a,b), segment(b,c), ...]
+ *    Lookup: [(a,point(...)), (b,point(..)))]
+ * =============================== */
+segmentsToPositions(Segments,Lookup,Result) :-
+    segmentsToPositions(Segments,Lookup,[],Result),!.
+
+
+segmentsToPositions([],_,Positions,Positions).
+segmentsToPositions([Seg|Rest],Lookup,Acc,Positions):-
+    segA(Seg,A),
+    segB(Seg,B),
+    findPoint(A,Lookup,PA),
+    findPoint(B,Lookup,PB),
+    append(Acc,[segment(PA,PB)],Acc2),
+    segmentsToPositions(Rest,Lookup,Acc2,Positions)
+    .
+
+segA(segment(A,_),A).
+segB(segment(_,B),B).
+
+findPoint(Node,[Current|Rest],Position):-
+    key(Current,OtherNode),
+    (
+        Node == OtherNode ->
+            point(Current,Position)
+        ;
+            findPoint(Node,Rest,Position)
+    ).
+
+
+key((Node,_),Node).
+point((_,Point),Point).
 
 /* ===============================
  * DEFINE_RADIUS
@@ -156,13 +197,13 @@ test(first) :-
 test(plot) :-
     graph_utils:example(G),
     renderGraph(G,800,600,Ss),
-    writeln(Ss),
+    writeln('calc done!'),
     segments_plot(Ss).
 
 test(plot2):-
     graph_utils:example2(G),
     renderGraph(G,800,600,Ss),
-    writeln(Ss),
+    writeln('calc done!'),
     segments_plot(Ss).
 
 :- end_tests(sociograph).
