@@ -10,7 +10,8 @@
     sortByListSize/2,
     isClique/2,
     delete/3,
-    deleteIfContains/3
+    deleteIfContains/3,
+    example2/1
     ]).
 
 edgeToSegment(edge(A,B,_),(A,B)).
@@ -177,6 +178,36 @@ example([
     edge(b,c,1.8),
     edge(c,d,0.8),
     edge(d,e,1.5)
+]).
+example2([
+    edge(a,b,0.9),
+    edge(a,c,0.3),
+    edge(a,e,0.3),
+    edge(b,c,1.8),
+    edge(c,d,0.8),
+    edge(d,e,1.5),
+    edge(f,g,0.9),
+    edge(h,i,0.3),
+    edge(j,k,0.3),
+    edge(f,h,1.8),
+    edge(f,i,0.8),
+    edge(f,j,1.5),
+    edge(f,k,1.5),
+    edge(g,h,1.5),
+    edge(g,i,1.5),
+    edge(g,k,1.5),
+    edge(g,j,1.5),
+    edge(h,i,1.5),
+    edge(h,j,1.5),
+    edge(h,k,1.5),
+    edge(i,j,1.5),
+    edge(i,k,1.5),
+    edge(a2,b2,0.9),
+    edge(a2,c2,0.3),
+    edge(a2,e2,0.3),
+    edge(b2,c2,1.8),
+    edge(c2,d2,0.8),
+    edge(d2,e2,1.5)
 ]).
 
 /* ==========================
