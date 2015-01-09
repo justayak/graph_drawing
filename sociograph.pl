@@ -14,12 +14,18 @@
  * [wSegment(point(X1,Y1),point(X2,Y2),WEIGHT,DIRECTED)]
  * =============================== */ 
 renderGraph(G,W,H,Segments) :-
+    min(W,H,S),
     distinctCliques(G,DistinctMaxCliques),
     defineCircleParameters(DistinctMaxCliques,W,H,Circle),
     renderGraph(DistinctMaxCliques,Circle,0,[],CliqueSegments,[],Lookup),
     findInterconnections(G,DistinctMaxCliques,Inter),
     segmentsToPositions(Inter,Lookup,InterSegments),
-    append(CliqueSegments,InterSegments,Segments).
+    %append(CliqueSegments,InterSegments,Segments).
+    append(CliqueSegments,InterSegments,Temp),
+    append(Temp,[
+        segment(point(0,0),point(0,0)),
+        segment(point(S,S),point(S,S))
+    ],Segments).
 
 /*
  *
@@ -37,7 +43,7 @@ renderGraph([Clique|Rest],Circle,I,Acc,Segments,LookupAcc,Lookup) :-
     px(Point,Px),
     py(Point,Py),
     random(0.0,360.0,RandomDeg),
-    calculateCliqueCircle(Clique,Circle,Px,Py,RandomDeg,CliqueSegments,CircleLookup),
+    calculateCliqueCircle(Clique,Circle,Px,Py,0,CliqueSegments,CircleLookup),
     append(Acc,CliqueSegments,Acc2),
     append(LookupAcc,CircleLookup,LookupAcc2),
     renderGraph(Rest,Circle,Ipp,Acc2,Segments,LookupAcc2,Lookup).
@@ -139,7 +145,7 @@ defineCircleParameters(DistinctMaxCliques,W,H, Circle):-
     RB is S / (2 * (1 + sin(HalfAlphaRad))),
     RS is RB * sin(HalfAlphaRad),
 
-    RSReduced is RS * 0.9, % reduce the clique circle a little so they arent too close
+    RSReduced is RS * 0.7, % reduce the clique circle a little so they arent too close
     Circle = (Alpha,RB,RSReduced,X,Y)
     .
 
@@ -178,6 +184,12 @@ degToPoint(X,Y,Alpha,R,Point):-
 degToRad(Deg,Rad):-
     Rad is Deg * (pi / 180).
 
+euclideanDistance(point(X1,Y1),point(X2,Y2),Distance):-
+    Distance is sqrt(
+        (X1-X2)*(X1-X2) +
+        (Y1-Y2)*(Y1-Y2)
+    ).
+
 /* ============== *
  *   UNIT  TEST   *
  * ============== */
@@ -188,6 +200,17 @@ ex([
     segment(point(3,0),point(6,10))
 ]).
 
+testP1(point(10,0)).
+testP2(point(40,0)).
+
+test(distance):-
+    testP1(P1),
+    testP2(P2),
+    euclideanDistance(P2,P1,Distance),
+    euclideanDistance(P1,P2,Distance2),
+    Distance == Distance2,
+    Distance == 30.0.
+
 test(first) :-
     graph_utils:example2(G),
     graph_utils:distinctCliques(G,C),
@@ -196,13 +219,13 @@ test(first) :-
 
 test(plot) :-
     graph_utils:example(G),
-    renderGraph(G,800,600,Ss),
+    renderGraph(G,100,100,Ss),
     writeln('calc done!'),
     segments_plot(Ss).
 
 test(plot2):-
     graph_utils:example2(G),
-    renderGraph(G,800,600,Ss),
+    renderGraph(G,60,60,Ss),
     writeln('calc done!'),
     segments_plot(Ss).
 
