@@ -3,7 +3,13 @@
     renderGraph/4
 ]).
 :- use_module(lib/plot_graph, [segments_plot/1]).
-:- use_module(graph_utils, [distinctCliques/2, example/1,example2/1,findInterconnections/3]).
+:- use_module(graph_utils, [
+    distinctCliques/2, 
+    example/1,
+    example2/1,
+    findInterconnections/3,
+    getNeighbors/3    
+]).
 
 /* ===============================
  * RENDER_GRAPH
@@ -17,7 +23,8 @@ renderGraph(G,W,H,Segments) :-
     min(W,H,S),
     distinctCliques(G,DistinctMaxCliques),
     defineCircleParameters(DistinctMaxCliques,W,H,Circle),
-    renderGraph(DistinctMaxCliques,Circle,0,[],CliqueSegments,[],Lookup),
+    %renderGraph(DistinctMaxCliques,Circle,0,[],CliqueSegments,[],Lookup),
+    renderGraphHeuristics(G,DistinctMaxCliques,Circle,0,[],CliqueSegments,[],Lookup),
     findInterconnections(G,DistinctMaxCliques,Inter),
     segmentsToPositions(Inter,Lookup,InterSegments),
     %append(CliqueSegments,InterSegments,Segments).
@@ -27,8 +34,8 @@ renderGraph(G,W,H,Segments) :-
         segment(point(S,S),point(S,S))
     ],Segments).
 
-/*
- *
+/* ===========================================================================
+ *  N O  H E U R I S T I C ! !
  *  Lookup: [(a,point(X,Y)), (b,point(X,Y)), ...]
  */
 renderGraph([],_,_,Segments,Segments,Lookup,Lookup).
@@ -65,7 +72,101 @@ calculateCliqueCircle([Node|Rest],Circle,Alpha,X,Y,I,RandomDeg,Acc,Result,Lookup
     append(Acc,[Point],Acc2),
     append(LookupAcc,[(Node,Point)],LookupAcc2),
     calculateCliqueCircle(Rest,Circle,Alpha,X,Y,Ipp,RandomDeg,Acc2,Result,LookupAcc2,Lookup).
+/*============================================================================*/
 
+/* =======================================
+ * RENDER_GRAPH_HEURISTICS
+ * =======================================*/
+
+renderGraphHeuristics(_,[],_,_,Segments,Segments,Lookup,Lookup).
+renderGraphHeuristics(G,[Clique|Rest],Circle,I,Acc,Segments,LookupAcc,Lookup):-
+    Ipp is I + 1,
+    alpha(Circle,Alpha),
+    AlphaC is Alpha * I,
+    innerRadius(Circle,R),
+    x(Circle,X),
+    y(Circle,Y),
+    degToPoint(X,Y,AlphaC,R,Point),
+    px(Point,Px),
+    py(Point,Py),
+    sortByNeighborCount(G,Clique,SortedClique),
+    calculatePointsForClique(Clique,Circle,Px,Py,Points),
+    sortByDistanceToCenter(X,Y,Points,SortedPoints),
+    createLookup(SortedClique,SortedPoints,[],TempLookup),
+    writeln(TempLookup),
+    append(LookupAcc,TempLookup,LookupAcc2),
+    segmentate(Points,[],Temp),
+    append(Acc,Temp,Acc2),
+    renderGraphHeuristics(G,Rest,Circle,Ipp,Acc2,Segments,LookupAcc2,Lookup).
+
+%============================
+%Lookup = [(a,point(...)),(b,point(...)),...]
+createLookup([],[],Lookup,Lookup).
+createLookup([Node|Clique],[Point|Points],Acc,Lookup):-
+    append(Acc,[(Node,Point)],Acc2),
+    createLookup(Clique,Points,Acc2,Lookup).
+
+%============================
+calculatePointsForClique(Clique,Circle,X,Y,Result) :-
+    length(Clique,N),
+    Alpha is 360/N,
+    cliqueRadius(Circle,R),
+    calculatePointsForClique(Clique,Alpha,R,X,Y,0,[],Result)
+    .
+
+calculatePointsForClique([],_,_,_,_,_,Acc,Acc).
+calculatePointsForClique([N|Rest],Alpha,R,X,Y,I,Acc,Result):-
+    Ipp is I + 1,
+    AlphaC is Alpha * I,
+    degToPoint(X,Y,AlphaC,R,Point),
+    append(Acc,[Point],Acc2),
+    calculatePointsForClique(Rest,Alpha,R,X,Y,Ipp,Acc2,Result).
+
+/*SORT BY DISTANCE TO CENTER*/
+sortByDistanceToCenter(X,Y,Points,Sorted):-
+    Center = point(X,Y),
+    sortPrepD(Center,Points,[],Temp),
+    predsort(checkSecondParam,Temp,Temp2),
+    reverse(Temp2,Temp3),
+    sortUnwrap(Temp3,[],Sorted),!.
+
+sortPrepD(_,[],Acc,Acc).
+sortPrepD(Center,[Point|Rest],Acc,Result):-
+    euclideanDistance(Center,Point,Distance),
+    append(Acc,[(Point,Distance)],Acc2),
+    sortPrepD(Center,Rest,Acc2,Result).
+
+/*SORT BY NEIGHBORS*/
+sortByNeighborCount(G,Clique,Sorted) :- 
+    sortPrepN(G,Clique,[],Temp),
+    predsort(checkSecondParam,Temp,Temp2),
+    sortUnwrap(Temp2,[],Sorted),!.
+
+checkSecondParam(>,A,B):-
+    p2(A,Ac),
+    p2(B,Bc),
+    Ac=<Bc.
+checkSecondParam(<,A,B):-
+    p2(A,Ac),
+    p2(B,Bc),
+    Ac>Bc.
+
+p2((_,C),C).
+
+sortPrepN(_,[],Acc,Acc).
+sortPrepN(G,[Node|Rest],Acc,Result) :-
+    getNeighbors(Node,G,N),
+    length(N,Count),
+    append(Acc,[(Node,Count)],Acc2),
+    sortPrepN(G,Rest,Acc2,Result)
+    .
+
+sortUnwrap([],Acc,Acc).
+sortUnwrap([(Node,_)|Rest],Acc,Result):-
+    append(Acc,[Node],Acc2),
+    sortUnwrap(Rest,Acc2,Result).
+
+/*============================================================================*/
 
 segmentate([],Segments,Segments).
 segmentate([A|Rest],Acc,Segments) :-
@@ -228,5 +329,24 @@ test(plot2):-
     renderGraph(G,60,60,Ss),
     writeln('calc done!'),
     segments_plot(Ss).
+
+%sortByNeighborCount(G,Clique,Sorted) :- 
+test(sortByNeighborCount):-
+    graph_utils:example(G),
+    distinctCliques(G,[Clique|_]),
+    sortByNeighborCount(G,Clique,Sorted),
+    Sorted == [c,a,b].
+
+%calculatePointsForClique(Clique,Circle,X,Y,Result) :-
+test(heuristicsCalcPoints):-
+    graph_utils:example(G),
+    distinctCliques(G,Cliques),
+    defineCircleParameters(Cliques,100,100,Circle),
+    [Clique|_] = Cliques,
+    calculatePointsForClique(Clique,Circle,50,50,Result),
+    writeln(Result),
+    sortByDistanceToCenter(50,50,Result,Sorted),
+    writeln(Sorted)
+    .
 
 :- end_tests(sociograph).
