@@ -1,5 +1,5 @@
 :- module(io,[]).
-:- use_module(sociograph, [graphizRenderGraph/4]).
+:- use_module(social_network, [renderGraph/4]).
 :- initialization(main).
 
 % Example graph
@@ -109,7 +109,7 @@ y(point(_,Y),Y).
 
 main:-
     graph2(G), 
-    graphizRenderGraph(G,10,10,Seg),
+    renderGraph(G,10,10,Seg),
     writeln('graph G {'),
     renderNodes(Seg,[]),
     renderEdges(Seg),

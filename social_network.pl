@@ -21,7 +21,8 @@
  * ============================================================ */
 renderGraph(G,W,H,Segments) :-
     distinctCliques(G,DistinctMaxCliques),
-    shuffle(DistinctMaxCliques,ShuffledCliques),
+    %shuffle(DistinctMaxCliques,ShuffledCliques),
+    ShuffledCliques = DistinctMaxCliques,
     defineCircleParameters(ShuffledCliques,W,H,Circle),
     renderGraphHeuristics(G,ShuffledCliques,Circle,0,[],CliqueSegments,[],Lookup),
     findInterconnections(G,ShuffledCliques,Inter),
@@ -440,6 +441,18 @@ euclideanDistance(point(X1,Y1),point(X2,Y2),Distance):-
         (Y1-Y2)*(Y1-Y2)
     ).
 
+% calculates the point that is specified by another point and
+% a degree and a radius
+degToPoint(X,Y,  0,R,Point):- XR is X + R, Point = point(XR,Y),!.
+degToPoint(X,Y, 90,R,Point):- YR is Y - R, Point = point(X,YR),!.
+degToPoint(X,Y,180,R,Point):- XR is X - R, Point = point(XR,Y),!.
+degToPoint(X,Y,360,R,Point):- YR is Y + R, Point = point(X,YR),!.
+degToPoint(X,Y,Alpha,R,Point):-
+    degToRad(Alpha,AlphaRad),
+    Xs is X + R * cos(AlphaRad),
+    Ys is Y + R * sin(AlphaRad),
+    Point = point(Xs,Ys),!.
+
 % choose a random element
 choose([],[]).
 choose(List,Elt):-
@@ -526,6 +539,14 @@ deleteIfContainsRecSingle(E, [H|T],Acc, Result):-
         ;
             append(Acc, [H], Acc2),
             deleteIfContainsRecSingle(E, T, Acc2, Result)
+    ).
+
+min(A,B,Result):-
+    (
+        A > B ->
+            set(B,Result)
+        ;
+            set(A,Result)
     ).
 
 /* ============================================================ *
@@ -638,7 +659,10 @@ test(addDeg):-
 
 /* ----------------------------------------- */
 
-
+test(soziograph):-
+	example(G),
+	renderGraph(G,10,10,Seg),
+	write(Seg).
 
 /* ----------------------------------------- */
 
