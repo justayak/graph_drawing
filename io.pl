@@ -1,5 +1,5 @@
 :- module(io,[]).
-:- use_module(sociograph, [renderGraph/4]).
+:- use_module(sociograph, [graphizRenderGraph/4]).
 :- initialization(main).
 
 % Example graph
@@ -10,6 +10,61 @@ g(
         (c,point(10,0),d,point(0,10),2)
     ]
 ).
+
+graph([
+    edge(a,b,0.9),
+    edge(a,c,0.3),
+    edge(a,e,0.3),
+    edge(b,c,1.8),
+    edge(c,d,0.8),
+    edge(d,e,1.5)
+]).
+
+graph2([
+    edge(a,b,1.3),
+    edge(a,c,2),
+    edge(a,d,2),
+    edge(b,c,0.9),
+    edge(b,d,0.7),
+    edge(c,d,2),
+
+    edge(e,f,1.2),
+    edge(e,g,1),
+    edge(e,h,1),
+    edge(f,g,2),
+    edge(f,h,1.2),
+    edge(g,h,0.2),
+
+    edge(i,j,1.2),
+    edge(i,l,0.9),
+    edge(i,k,1.2),
+    edge(j,l,2),
+    edge(j,k,1.8),
+    edge(l,k,0.4),
+
+    edge(p,q,1.5),
+    edge(p,r,1.4),
+    edge(q,r,1.5),
+
+    edge(m,n,2),
+    edge(m,o,2),
+    edge(o,n,2),
+
+    edge(a,s,0.2),
+    edge(n,s,0.4),
+    edge(f,s,0.1),
+
+    edge(d,g,0.4),
+    edge(d,q,1.5),
+    edge(d,i,1.4),
+
+    edge(q,i,2),
+    edge(i,m,1.2),
+    edge(j,m,0.3),
+    edge(g,m,0.5),
+    edge(h,m,0.3)
+
+]).
 
 renderNodes([],_).
 renderNodes([Segment|Rest],NodesAlreadyUsed):-
@@ -53,7 +108,8 @@ x(point(X,_),X).
 y(point(_,Y),Y).
 
 main:-
-    g(Seg),
+    graph2(G), 
+    graphizRenderGraph(G,10,10,Seg),
     writeln('graph G {'),
     renderNodes(Seg,[]),
     renderEdges(Seg),

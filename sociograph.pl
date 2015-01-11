@@ -1,6 +1,7 @@
 :- module(sociograph, [
     degToPoint/5,
-    renderGraph/4
+    renderGraph/4,
+    graphizRenderGraph/4
 ]).
 :- use_module(lib/plot_graph, [segments_plot/1]).
 :- use_module(graph_utils, [
@@ -10,6 +11,97 @@
     findInterconnections/3,
     getNeighbors/3    
 ]).
+
+/* ===============================
+ * GRAPHIZ_RENDER_GRAPH
+ * This function is supposed to be used in conjunction with 
+ * graphiz instead of gnuplot
+ * G: Graph expl: [edge(a,b,0.1), edge(a,c,0.2),...]
+ * W: Width
+ * H: Height
+ * Segments: Return Value:
+ *      [
+ *          (a,point(12,11),b,point(23,11,0.1),
+ *          (a,point(12,11),c,point(1,32),0.2),
+ *          ...
+ *      ]
+ * =============================== */
+graphizRenderGraph(G,W,H,Segments) :-
+    min(W,H,S),
+    distinctCliques(G,DistinctMaxCliques),
+    shuffle(DistinctMaxCliques,ShuffledCliques),
+    defineCircleParameters(ShuffledCliques,W,H,Circle),
+    renderGraphHeuristics(G,ShuffledCliques,Circle,0,[],CliqueSegments,[],Lookup),
+    findInterconnections(G,ShuffledCliques,Inter),
+    segmentsToPositions(Inter,Lookup,InterSegments),
+    append(CliqueSegments,InterSegments,Temp),
+    transformForGraphiz(G,Temp,Lookup,[],Segments).
+
+/*
+ * Transform
+ * G : [
+ *      edge(a,b,1.4),
+ *      edge(b,c,0.3),
+ *      ...
+ * ]
+ *
+ * AND
+ * 
+ * Segments : [
+ *      segment(point(1,2),point(5,10)),
+ *      segment(point(5,10),point(11,23)),
+ *      ...
+ * ] 
+ * 
+ * AND
+ *
+ * Lookup: [
+ *      (a,point(1,2)),
+ *      (b,point(5,10)),
+ *      (c,point(11,23)),
+ *      ...
+ * ]
+ * 
+ * INTO -->
+ * 
+ * [
+ *     (a,point(1,2),b,point(5,10),1.4),
+ *     (b,point(5,10),c,point(11,23),0.3),
+ *     ...
+ * ]
+ *
+ * */
+transformForGraphiz(_,[],_,Segments,Segments).
+transformForGraphiz(G,[Segment|Rest],Lookup,Acc,Segments):-
+    segmentPointA(Segment,PointA),
+    segmentPointB(Segment,PointB),    
+    pointToNode(PointA,Lookup,NodeA),
+    pointToNode(PointB,Lookup,NodeB),
+    getEdgeWeight(G,NodeA,NodeB,Weight),
+    LenseWeight is Weight * Weight,
+    append(Acc, [(NodeA,PointA,NodeB,PointB,LenseWeight)],Acc2),
+    transformForGraphiz(G,Rest,Lookup,Acc2,Segments).
+
+segmentPointA(segment(P,_),P).
+segmentPointB(segment(_,P),P).
+
+
+getEdgeWeight([edge(A,B,Weight)|_],A,B,Weight).
+getEdgeWeight([edge(B,A,Weight)|_],A,B,Weight).
+getEdgeWeight([_|Rest],A,B,Weight):-getEdgeWeight(Rest,A,B,Weight).
+
+pointToNode(Point,Lookup,Node) :-
+    px(Point,X),
+    py(Point,Y),
+    [(Other,OPoint)|Rest] = Lookup,
+    px(OPoint,OX),
+    py(OPoint,OY),
+    (
+        X == OX, Y == OY ->
+            Node = Other
+        ;
+            pointToNode(Point,Rest,Node)
+    ).
 
 /* ===============================
  * RENDER_GRAPH
@@ -93,7 +185,6 @@ renderGraphHeuristics(G,[Clique|Rest],Circle,I,Acc,Segments,LookupAcc,Lookup):-
     calculatePointsForClique(Clique,Circle,Px,Py,Points),
     sortByDistanceToCenter(X,Y,Points,SortedPoints),
     createLookup(SortedClique,SortedPoints,[],TempLookup),
-    writeln(TempLookup),
     append(LookupAcc,TempLookup,LookupAcc2),
     segmentate(Points,[],Temp),
     append(Acc,Temp,Acc2),
@@ -110,17 +201,19 @@ createLookup([Node|Clique],[Point|Points],Acc,Lookup):-
 calculatePointsForClique(Clique,Circle,X,Y,Result) :-
     length(Clique,N),
     Alpha is 360/N,
+    random(0.0,360.0,RandomDeg),
     cliqueRadius(Circle,R),
-    calculatePointsForClique(Clique,Alpha,R,X,Y,0,[],Result)
+    calculatePointsForClique(Clique,Alpha,R,X,Y,0,RandomDeg,[],Result)
     .
 
-calculatePointsForClique([],_,_,_,_,_,Acc,Acc).
-calculatePointsForClique([N|Rest],Alpha,R,X,Y,I,Acc,Result):-
+calculatePointsForClique([],_,_,_,_,_,_,Acc,Acc).
+calculatePointsForClique([N|Rest],Alpha,R,X,Y,I,RandomDeg,Acc,Result):-
     Ipp is I + 1,
     AlphaC is Alpha * I,
-    degToPoint(X,Y,AlphaC,R,Point),
+    addDeg(AlphaC,RandomDeg,RandomAlpha),
+    degToPoint(X,Y,RandomAlpha,R,Point),
     append(Acc,[Point],Acc2),
-    calculatePointsForClique(Rest,Alpha,R,X,Y,Ipp,Acc2,Result).
+    calculatePointsForClique(Rest,Alpha,R,X,Y,Ipp,RandomDeg,Acc2,Result).
 
 /*SORT BY DISTANCE TO CENTER*/
 sortByDistanceToCenter(X,Y,Points,Sorted):-
@@ -180,11 +273,12 @@ createSegments(Node,[NextNode|Rest],Acc,Segments):-
     createSegments(Node,Rest,Acc2,Segments).
 
 addDeg(Deg1,Deg2,Result):-
+    Temp is Deg1 + Deg2,
     (
-        (Deg1 + Deg2) > 360 ->
-            Result is abs(Deg1 - Deg2)
+        Temp > 360 ->
+            Result is Temp - 360
         ;
-            Result is Deg1 + Deg2
+            Result is Temp
     ).
 /* ===============================
  *    Segments to Positions
@@ -291,6 +385,20 @@ euclideanDistance(point(X1,Y1),point(X2,Y2),Distance):-
         (Y1-Y2)*(Y1-Y2)
     ).
 
+% choose a random element
+choose([],[]).
+choose(List,Elt):-
+    length(List,Length),
+    random(0,Length,Index),
+    nth0(Index,List,Elt).
+
+% randomly shuffles a list
+shuffle([],[]).
+shuffle(List,[Element|Rest]):-
+    choose(List,Element),
+    delete(List,Element,NewList),
+    shuffle(NewList,Rest).
+
 /* ============== *
  *   UNIT  TEST   *
  * ============== */
@@ -348,5 +456,26 @@ test(heuristicsCalcPoints):-
     sortByDistanceToCenter(50,50,Result,Sorted),
     writeln(Sorted)
     .
+
+test(graphiz1):-
+    graph_utils:example(G),
+    graphizRenderGraph(G,100,100,Segments),
+    writeln(Segments).
+
+test(shuffle):-
+    shuffle([1,2,3],S),
+    writeln(S).
+
+test(addDeg):-
+    addDeg(360,0,R1),
+    R1 == 360,
+    addDeg(360,1,R2),
+    R2 == 1,
+    addDeg(20,150,R3),
+    R3 == 170,
+    addDeg(181,181,R4),
+    R4 == 2,
+    addDeg(65,350,R5),
+    R5 == 55.
 
 :- end_tests(sociograph).
