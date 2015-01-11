@@ -96,6 +96,9 @@ pointToNode(Point,Lookup,Node) :-
 
 /* ============================================================
  * RENDER_GRAPH_HEURISTICS/8
+ *		G: Graph
+ *		DistinctCliques: [[a,b,c],[e,d],...]
+ *		Circle: ()
  * ============================================================ */
 renderGraphHeuristics(_,[],_,_,Segments,Segments,Lookup,Lookup).
 renderGraphHeuristics(G,[Clique|Rest],Circle,I,Acc,Segments,LookupAcc,Lookup):-
@@ -240,14 +243,12 @@ point((_,Point),Point).
  * DistinctMaxCliques
  * W: Width
  * H: Height
- * Circle: (R,R_Multiplier,SCircleDistance)
- *    R: Radius of the inner circle
- *    R_Multiplier: Multiplier by which
- *      the number of nodes in a clique
- *      is multiplied to determine the
- *      cliques circle's radius
- *    SCircleDistance: Arc-Distance between
- *      sub circles on the main circle
+ * Circle: (Alpha,R_Inner,R_Outer,X,Y)
+ *	  Alpha: Degree in which we step thorugh the graph (Depends on |Cliques|)
+ *    R_Inner: Radius of the inner circle
+ *    R_Outer: Radius of the outer clique circles
+ *    X: X-position of the Main Circle
+ *	  Y: Y-position of the Main Circle
  * ============================================================ */ 
 defineCircleParameters(DistinctMaxCliques,W,H, Circle):-
     length(DistinctMaxCliques,N),
@@ -273,6 +274,10 @@ py(point(_,Y),Y).
 
 /* ============================================================
  * ARE_NEIGHBORS/3
+ *	   A \in N
+ *     B \in N
+ *     G (N x N x ..)
+ * Returns true, when the two nodes are neighbors, false otherwise
  * ============================================================ */
 areNeighbors(A,B, G) :-
     member(edge(A,B,_), G),!;
@@ -280,8 +285,8 @@ areNeighbors(A,B, G) :-
 
 /* ============================================================
  * GET_NEIGHBORS/3
- *        A = The Node
- *        G = The Graph
+ *        A = The Node \in N
+ *        G = The Graph G (N x N)
  *        N = Result
  * This function has POOR performance!
  * ============================================================ */
@@ -757,7 +762,7 @@ test(complement):-
 test(bk):-
 	example(G),
 	findDistinctMaximumCliquesBK(G,Cliques),
-	writeln(Cliques).
+	Cliques == [[a,b,c],[e,d]].
 
 /* ----------------------------------------- */
 
