@@ -20,7 +20,8 @@
  *      ]
  * ============================================================ */
 renderGraph(G,W,H,Segments) :-
-    distinctCliques(G,DistinctMaxCliques),
+    %distinctCliques(G,DistinctMaxCliques),
+    findDistinctMaximumCliquesBK(G,DistinctMaxCliques),
     %shuffle(DistinctMaxCliques,ShuffledCliques),
     ShuffledCliques = DistinctMaxCliques,
     defineCircleParameters(ShuffledCliques,W,H,Circle),
@@ -358,6 +359,69 @@ isCliqueRecSingle(X,[A|Rest],G):-
     ).
 
 /* ============================================================
+ * FIND_DISTINCT_MAXIMUM_CLIQUES_BK/2
+ *		Find all Maximum Cliques in a given Graph G.
+ *		Another contraint is that this Cliques cannot have any
+ *		Member of the other Cliques, they NEED to be distinct
+ *		This function utilises Bron-Kerbosch to speed up the process
+ * ============================================================ */
+findDistinctMaximumCliquesBK(G,DistMaxCliques):-
+	getNodes(G,P),
+	bk([],P,[],G,[],MaxCliques),
+	makeDistinct(MaxCliques,[],DistMaxCliques).
+
+makeDistinct([],R,R).
+makeDistinct([Clique|Rest],Acc,Result):-
+	(
+		memberMember(Clique,Acc) ->
+			makeDistinct(Rest,Acc,Result)
+		;
+			append(Acc,[Clique],Acc2),
+			makeDistinct(Rest,Acc2,Result)
+	).
+	
+memberMember(List,Set):-
+	length(Set,LenSet),
+	LenSet > 0,
+	[OtherList|Rest] = Set,
+	intersection(List,OtherList,Cut),
+	length(Cut,LenCut),
+	(
+		LenCut == 0 ->
+			memberMember(List,Rest)
+		;
+			a=a
+	).
+
+
+
+bk(R,P,X,G,Acc,Result):-
+	length(P,LenP),
+	length(X,LenX),
+	(
+		LenP = 0 , LenX = 0 ->
+			append(Acc,[R],Acc2)
+		;
+			Acc2 = Acc
+	),
+	bk_loop(R,P,X,G,Acc2,Result)
+	.
+
+bk_loop(_,[],_,_,R,R).
+bk_loop(R,[V|Rest],X,G,Acc,Result):-
+	P = [V|Rest],
+	append(R,[V],RV),
+	getNeighbors(V,G,NV),
+	intersection(P,NV,PV),
+	intersection(X,NV,XV),
+	bk(RV,PV,XV,G,[],InnerResult),
+	append(Acc,InnerResult,Acc2),
+	%complement(P,[V],P2),
+	append(X,[V],X2),
+	bk_loop(R,Rest,X2,G,Acc2,Result)
+	.
+
+/* ============================================================
  * FIND_INTERCONNECTIONS/3
  *		Finds all segments that connect all Cliques with each 
  *		other
@@ -549,6 +613,20 @@ min(A,B,Result):-
             set(A,Result)
     ).
 
+complement(SetA,SetB,Result):-
+	complement(SetA,SetB,[],Result).
+
+complement([],_,Result,Result).
+complement([A|Rest],SetB,Acc,Result) :-
+	(
+		member(A,SetB) ->
+			complement(Rest,SetB,Acc,Result)
+		;
+			append(Acc,[A],Acc2),
+			complement(Rest,SetB,Acc2,Result)
+	).
+
+
 /* ============================================================ *
  *
  *
@@ -663,6 +741,33 @@ test(soziograph):-
 	example(G),
 	renderGraph(G,10,10,Seg),
 	write(Seg).
+
+/* ----------------------------------------- */
+
+test(complement):-
+	complement([1,2,3],[2,3,4],R),
+	R=[1],
+	complement([1,2,3],[4,5,6],W),
+	W=[1,2,3],
+	complement([2,3,4],[1,2,3],Q),
+	Q=[4].
+
+/* ----------------------------------------- */
+
+test(bk):-
+	example(G),
+	findDistinctMaximumCliquesBK(G,Cliques),
+	writeln(Cliques).
+
+/* ----------------------------------------- */
+
+test(memberMember):-
+	memberMember([a,b], [[d,e],[a,b,c]]).
+
+/* ----------------------------------------- */
+
+test(notmemberMember):-
+	not(memberMember([a,b], [[d,e],[q,w,c]])).
 
 /* ----------------------------------------- */
 
