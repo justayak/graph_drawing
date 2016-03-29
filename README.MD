@@ -123,3 +123,19 @@ When this algorithm is applied, following graphic will be rendered:
 Applied to a more complex graph: 
 
 ![](https://cloud.githubusercontent.com/assets/831215/14106150/b71c525c-f5af-11e5-9008-1f16ee839a91.png)
+
+## How To Use
+
+The following part will describe of how to use the Program to render social graphs. The prolog program consists of 4 files:
+
+![](https://cloud.githubusercontent.com/assets/831215/14106824/2148e2ae-f5b4-11e5-982e-23a7ea46a798.png)
+
+The file social_network.pl contains the actual library to find all positions for a graph. The file graph.txt provides a graph given by the user. The file content must define a graph as follows:
+
+![](https://cloud.githubusercontent.com/assets/831215/14106162/ca4e58b6-f5af-11e5-83de-aac39ad6c21d.png)
+
+The file io.pl and generateGraph.sh are solely for the purpose to render a graph with graphiz. For the toolchain to work, the drawing tool graphiz must be installed. For the toolchain to work correctly, all files must reside in the same folder. To execute it, simply run the shell script **generateGraph.sh**.
+The graph data will be obtained from graph.txt and a PNG with the name graph.png will be rendered.
+
+### Usage in Prolog
+![](https://cloud.githubusercontent.com/assets/831215/14106170/d7e4b376-f5af-11e5-9b68-98a83d3a3fc2.png)
